@@ -28,6 +28,15 @@ pendant les heures de Bourse (cours non temps réel). En local (`localhost`), le
 
 Les détails techniques sont repliés par défaut : cliquer sur « ▸ » pour les afficher.
 
+## Tests
+
+```
+./tests/lancer_tests.sh
+```
+
+- `tests/finance.test.js` : 19 tests unitaires du moteur financier (Node.js 18+, `node --test tests/`)
+- `tests/test_serveur.py` : 16 tests du serveur, des données en ligne et du code source (`python3 -m unittest discover -s tests -v`)
+
 ## Fichiers
 
 - `serveur.py` : serveur local et relais Yahoo Finance (contourne le CORS) : cours (cache 30 s) et actualités filtrées (cache 15 min)
