@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Edge</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="entete">
+  <div class="marque">
+    <img class="logo" src="logo.svg" alt="" aria-hidden="true">
+    <h1>Weekly Edge</h1>
+  </div>
+  <nav class="onglets" role="tablist">
+    <button class="onglet actif" data-onglet="tableau">Accueil</button>
+    <button class="onglet" data-onglet="repartition">Répartition</button>
+    <button class="onglet" data-onglet="marche">Ordres</button>
+    <button class="onglet" data-onglet="prevision">Prévisions</button>
+    <button class="onglet" data-onglet="infos">Infos &amp; profil</button>
+  </nav>
+  <div class="etat">
+    <span id="etat-donnees" class="pastille">Chargement…</span>
+    <button id="btn-rafraichir" class="btn btn-ghost" title="Actualiser les cours">↻</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ ACCUEIL ============ -->
+  <section id="tableau" class="panneau actif">
+    <div class="grille-kpi" id="kpis"></div>
+
+    <div class="grille-2">
+      <div class="carte">
+        <h2>Perte de la semaine</h2>
+        <div id="jauge-hebdo"></div>
+      </div>
+      <div class="carte">
+        <h2>Objectif sur 1 an</h2>
+        <div id="jauge-objectif"></div>
+      </div>
+    </div>
+
+    <div class="grille-2">
+      <div class="carte">
+        <h2>Conseils</h2>
+        <ul id="conseils" class="conseils"></ul>
+      </div>
+      <div class="carte">
+        <h2>Mon portefeuille</h2>
+        <div id="compo-barre" class="barre-empilee"></div>
+        <div id="compo-legende" class="legende"></div>
+        <table class="tableau" id="table-positions"></table>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2>Évolution sur 6 mois</h2>
+      <div class="graph-h"><canvas id="graph-valeur"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ REPARTITION ============ -->
+  <section id="repartition" class="panneau">
+    <div class="carte">
+      <h2>Répartition conseillée</h2>
+      <div id="repart-resume" class="grille-kpi"></div>
+      <div id="repart-barre" class="barre-empilee grande"></div>
+      <div id="repart-legende" class="legende"></div>
+      <table class="tableau" id="table-repart"></table>
+      <div class="actions">
+        <button id="btn-valider-repart" class="btn btn-primaire">Valider et passer les ordres</button>
+        <span id="repart-msg" class="aide"></span>
+      </div>
+    </div>
+
+    <details class="carte" id="det-analyse">
+      <summary>Analyse détaillée : frontière efficiente, corrélations, méthode</summary>
+      <div class="grille-2 dans-details">
+        <div>
+          <h3>Frontière efficiente (5 000 portefeuilles simulés)</h3>
+          <div class="graph-h"><canvas id="graph-frontiere"></canvas></div>
+        </div>
+        <div>
+          <h3>Corrélations (1 an)</h3>
+          <div id="matrice-correl"></div>
+        </div>
+      </div>
+      <h3>Méthode</h3>
+      <div id="methode" class="texte"></div>
+    </details>
+  </section>
+
+  <!-- ============ ORDRES ============ -->
+  <section id="marche" class="panneau">
+    <div class="carte">
+      <h2>Passer un ordre</h2>
+      <form id="form-ordre" class="form-ordre">
+        <select id="ordre-sens" aria-label="Sens">
+          <option value="achat">Acheter</option>
+          <option value="vente">Vendre</option>
+        </select>
+        <input id="ordre-valeur" type="number" min="0" step="any" value="10" aria-label="Valeur">
+        <select id="ordre-mode" aria-label="Unité">
+          <option value="qte">titres</option>
+          <option value="montant">€</option>
+        </select>
+        <select id="ordre-titre" aria-label="Titre"></select>
+        <button type="submit" class="btn btn-primaire">Exécuter</button>
+      </form>
+      <div class="ordre-apercu" id="ordre-apercu"></div>
+      <p id="ordre-msg" class="msg"></p>
+    </div>
+
+    <div id="cartes-titres" class="grille-titres"></div>
+
+    <details class="carte">
+      <summary>Historique des ordres</summary>
+      <table class="tableau" id="table-ordres"></table>
+    </details>
+  </section>
+
+  <!-- ============ PREVISIONS ============ -->
+  <section id="prevision" class="panneau">
+    <div class="carte">
+      <h2>La semaine prochaine (5 séances)</h2>
+      <p class="aide">Fourchettes probables, pas des certitudes.</p>
+      <table class="tableau" id="table-prev"></table>
+    </div>
+    <div class="grille-2">
+      <div class="carte">
+        <h2>Risque du portefeuille</h2>
+        <div id="risque-portef"></div>
+      </div>
+      <div class="carte">
+        <div class="titre-ligne">
+          <h2>Cône de prévision</h2>
+          <select id="prev-titre" aria-label="Titre"></select>
+        </div>
+        <div class="graph-h"><canvas id="graph-cone"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INFOS & PROFIL ============ -->
+  <section id="infos" class="panneau">
+    <div class="carte">
+      <h2>Ce qui fait bouger la Bourse</h2>
+      <p class="aide">Indicateurs suivis en direct et leur influence sur vos cinq titres.</p>
+      <div id="facteurs"></div>
+    </div>
+
+    <div class="carte">
+      <h2>Actualités récentes</h2>
+      <p class="aide">Derniers articles par société (Yahoo Finance, souvent en anglais). Ils s'ouvrent dans un nouvel onglet.</p>
+      <div id="actus" class="grille-actus"></div>
+    </div>
+
+    <div id="fiches" class="grille-titres"></div>
+
+    <details class="carte">
+      <summary>Événements à surveiller : banques centrales, inflation, résultats…</summary>
+      <dl id="evenements" class="lexique"></dl>
+    </details>
+
+    <details class="carte">
+      <summary>Paramètres du client</summary>
+      <form id="form-profil" class="form-profil">
+        <label>Capital (€) <input type="number" id="p-capital" min="1000" step="1000"></label>
+        <label>Objectif annuel (%) <input type="number" id="p-objectif" min="0" max="50" step="0.5"></label>
+        <label>Perte max. par semaine (%) <input type="number" id="p-perte" min="1" max="50" step="0.5"></label>
+        <label>Liquidités min. (%) <input type="number" id="p-cash" min="0" max="80" step="1"></label>
+        <label>Poids max. par titre (%) <input type="number" id="p-wmax" min="20" max="100" step="1"></label>
+        <label>Courtage (%) <input type="number" id="p-courtage" min="0" max="2" step="0.01"></label>
+        <label>TTF à l'achat (%) <input type="number" id="p-ttf" min="0" max="2" step="0.1"></label>
+        <div class="actions">
+          <button type="submit" class="btn btn-primaire">Enregistrer</button>
+          <button type="button" id="btn-reset" class="btn btn-danger">Réinitialiser le portefeuille</button>
+        </div>
+        <p id="profil-msg" class="msg"></p>
+      </form>
+    </details>
+
+    <details class="carte">
+      <summary>Questionnaire client</summary>
+      <table class="tableau questionnaire" id="table-questionnaire"></table>
+    </details>
+    <details class="carte">
+      <summary>Lexique des indicateurs</summary>
+      <dl id="lexique" class="lexique"></dl>
+    </details>
+    <details class="carte">
+      <summary>À savoir : fiscalité, horaires, limites du modèle</summary>
+      <div id="a-savoir" class="texte"></div>
+    </details>
+  </section>
+</main>
+
+<div id="tooltip" class="tooltip" role="tooltip"></div>
+
+<footer class="pied">
+  Données Yahoo Finance · ordres simulés · projet de cours, ne constitue pas un conseil en investissement réglementé.
+</footer>
+
+<script src="vendor/chart.umd.min.js"></script>
+<script src="finance.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
