@@ -25,6 +25,7 @@
 body { margin: 0; background: var(--page); color: var(--encre); font-size: 14px; line-height: 1.45; }
 h1 { font-size: 20px; margin: 0; white-space: nowrap; }
 h2 { font-size: 15px; margin: 0 0 8px; }
+.bienvenue { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
 .aide { color: var(--encre-2); margin: 0 0 12px; font-size: 13px; }
 .num, td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
 
