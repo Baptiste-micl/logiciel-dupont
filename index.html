@@ -22,11 +22,21 @@
     <button class="onglet" data-onglet="infos">Infos &amp; profil</button>
   </nav>
   <div class="etat">
-    <button id="badge-niveau" class="pastille pastille-niveau" title="Changer de profil d'investisseur">Profil : à choisir</button>
+    <span id="badge-niveau" class="pastille pastille-niveau">Profil : à choisir</span>
     <span id="etat-donnees" class="pastille">Chargement…</span>
     <button id="btn-rafraichir" class="btn btn-ghost" title="Actualiser les cours">↻</button>
   </div>
 </header>
+
+<!-- ============ CHOIX DU PROFIL : obligatoire à la première visite ============ -->
+<div id="choix-profil" class="ecran-choix" role="dialog" aria-modal="true" aria-labelledby="choix-titre" hidden>
+  <div class="choix-boite">
+    <p class="hero-sur">Bienvenue Monsieur Dupont</p>
+    <h2 id="choix-titre" class="choix-titre">Avant de commencer : quel investisseur êtes-vous ?</h2>
+    <p class="aide">Ce choix règle la perte que vous acceptez, la part gardée de côté et les garde-fous sur vos achats. Les conseils et la répartition proposée en dépendent.</p>
+    <div class="grille-niveaux" id="niveaux"></div>
+  </div>
+</div>
 
 <main>
   <!-- ============ DÉCOUVRIR (première visite) ============ -->
@@ -37,34 +47,28 @@
         <h2 class="hero-titre">Bienvenue Monsieur Dupont</h2>
         <p class="hero-intro">Placez votre capital sur cinq grandes entreprises françaises. Le logiciel calcule une répartition pour vous, l'explique en mots simples et adapte ses conseils à votre expérience.</p>
         <div class="actions">
-          <button class="btn btn-primaire btn-grand" data-aller="profil-risque">Choisir mon profil</button>
+          <button class="btn btn-primaire btn-grand" data-aller="repartition">Voir la répartition conseillée</button>
           <button class="btn btn-grand" data-aller="tableau">Voir mon tableau de bord</button>
         </div>
+        <p id="niveau-msg" class="msg"></p>
       </div>
       <div class="hero-chiffres" id="hero-chiffres"></div>
     </div>
 
-    <div class="carte" id="profil-risque">
-      <h2 class="etape"><span>1</span>Votre profil d'investisseur</h2>
-      <p class="aide">C'est le réglage le plus important. Il fixe la perte que vous acceptez, la part gardée de côté et les garde-fous sur vos achats. Vous pourrez le changer à tout moment.</p>
-      <div class="grille-niveaux" id="niveaux"></div>
-      <p id="niveau-msg" class="msg"></p>
-    </div>
-
     <div class="grille-2">
       <div class="carte">
-        <h2 class="etape"><span>2</span>Les mots à connaître</h2>
+        <h2 class="etape"><span>1</span>Les mots à connaître</h2>
         <dl id="definitions" class="lexique"></dl>
       </div>
       <div class="carte">
-        <h2 class="etape"><span>3</span>L'actualité de vos entreprises</h2>
+        <h2 class="etape"><span>2</span>L'actualité de vos entreprises</h2>
         <p class="aide">Ton de chaque article jugé par l'IA FinBERT. Les titres sont en anglais.</p>
         <ul id="decouvrir-actus" class="liste-actus"></ul>
       </div>
     </div>
 
     <div class="carte">
-      <h2 class="etape"><span>4</span>Vos cinq entreprises</h2>
+      <h2 class="etape"><span>3</span>Vos cinq entreprises</h2>
       <div id="decouvrir-titres" class="grille-entreprises"></div>
     </div>
   </section>
@@ -219,6 +223,7 @@
         <label>TTF à l'achat (%) <input type="number" id="p-ttf" min="0" max="2" step="0.1"></label>
         <div class="actions">
           <button type="submit" class="btn btn-primaire">Enregistrer</button>
+          <button type="button" id="btn-changer-profil" class="btn">Changer de profil d'investisseur</button>
           <button type="button" id="btn-reset" class="btn btn-danger">Réinitialiser le portefeuille</button>
         </div>
         <p id="profil-msg" class="msg"></p>

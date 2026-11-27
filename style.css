@@ -257,7 +257,14 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .entreprise p { margin: 0 0 6px; font-size: 13px; color: var(--encre-2); }
 .entreprise .entreprise-cours { color: var(--encre); font-variant-numeric: tabular-nums; }
 
-.pastille-niveau { cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; color: var(--accent-fonce); }
+.pastille-niveau { font-size: 12px; font-weight: 600; color: var(--accent-fonce); }
+
+/* Écran de choix du profil (première visite) */
+.ecran-choix { position: fixed; inset: 0; z-index: 100; background: rgba(15, 27, 45, .55); display: grid; place-items: center; padding: 24px; overflow-y: auto; }
+.ecran-choix[hidden] { display: none; }
+.choix-boite { background: var(--carte); border-radius: 14px; padding: 32px; max-width: 1100px; width: 100%; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+.choix-titre { font-size: 26px; line-height: 1.2; margin: 0 0 8px; }
+.choix-ouvert { overflow: hidden; }
 .pastille-niveau.a-choisir { background: #fff6e0; border-color: var(--vigilance); color: #7a5200; }
 
 /* Profil Débutant : on masque l'analyse technique détaillée */
