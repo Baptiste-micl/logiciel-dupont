@@ -28,16 +28,6 @@
   </div>
 </header>
 
-<!-- ============ CHOIX DU PROFIL : obligatoire à la première visite ============ -->
-<div id="choix-profil" class="ecran-choix" role="dialog" aria-modal="true" aria-labelledby="choix-titre" hidden>
-  <div class="choix-boite">
-    <p class="hero-sur">Bienvenue Monsieur Dupont</p>
-    <h2 id="choix-titre" class="choix-titre">Avant de commencer : quel investisseur êtes-vous ?</h2>
-    <p class="aide">Ce choix règle la perte que vous acceptez, la part gardée de côté et les garde-fous sur vos achats. Les conseils et la répartition proposée en dépendent.</p>
-    <div class="grille-niveaux" id="niveaux"></div>
-  </div>
-</div>
-
 <main>
   <!-- ============ DÉCOUVRIR (première visite) ============ -->
   <section id="decouvrir" class="panneau">
@@ -47,10 +37,8 @@
         <h2 class="hero-titre">Bienvenue Monsieur Dupont</h2>
         <p class="hero-intro">Placez votre capital sur cinq grandes entreprises françaises. Le logiciel calcule une répartition pour vous, l'explique en mots simples et adapte ses conseils à votre expérience.</p>
         <div class="actions">
-          <button class="btn btn-primaire btn-grand" data-aller="repartition">Voir la répartition conseillée</button>
-          <button class="btn btn-grand" data-aller="tableau">Voir mon tableau de bord</button>
+          <button class="btn btn-primaire btn-grand" data-aller="profil-risque">Choisir mon profil</button>
         </div>
-        <p id="niveau-msg" class="msg"></p>
       </div>
       <div class="hero-chiffres" id="hero-chiffres"></div>
     </div>
@@ -70,6 +58,12 @@
     <div class="carte">
       <h2 class="etape"><span>3</span>Vos cinq entreprises</h2>
       <div id="decouvrir-titres" class="grille-entreprises"></div>
+    </div>
+
+    <div class="carte carte-choix" id="profil-risque">
+      <h2 class="etape"><span>4</span>Choisissez votre profil pour commencer</h2>
+      <p class="aide">C'est le réglage le plus important : il fixe la perte que vous acceptez, la part gardée de côté et les garde-fous sur vos achats. Les conseils et la répartition proposée en dépendent.</p>
+      <div class="grille-niveaux" id="niveaux"></div>
     </div>
   </section>
 

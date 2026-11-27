@@ -31,7 +31,7 @@ Le profil règle l'optimisation, les conseils et les contrôles d'ordres (`Finan
 
 | Onglet | Rôle |
 |---|---|
-| Découvrir | Page d'arrivée pour un novice : valeur disponible, mots à connaître, actualité, les cinq entreprises. À la première visite, un écran impose le **choix du profil d'investisseur** (débutant, intermédiaire, avancé, expert) ; il ne réapparaît plus ensuite (changement possible dans Infos & profil › Paramètres du client) |
+| Découvrir | Première visite uniquement, sans les autres onglets : valeur disponible, mots à connaître, actualité, les cinq entreprises, puis le **choix du profil d'investisseur** (débutant, intermédiaire, avancé, expert). Une fois le profil choisi, la page disparaît (changement possible dans Infos & profil › Paramètres du client) |
 | Accueil | Valeur, gain, jauges perte hebdo (limite 10 %) et objectif annuel, conseils, composition, évolution |
 | Répartition | Répartition conseillée, rôle de chaque titre (justification détaillée dépliable), validation en un clic ; analyse détaillée repliée (frontière efficiente, corrélations, méthode) |
 | Ordres | Achat/vente instantané avec frais (courtage + TTF), cours et signaux par titre, historique replié |

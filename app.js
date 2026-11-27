@@ -585,6 +585,7 @@ function genererConseils() {
   const sem = variationSemaine(), lim = p.perte / 100;
   const w = poidsActuels(), cashW = etat.cash / V;
 
+  if (niveauJusteChoisi && etat.niveau) c.push(["bon", "✓", `Profil ${nomNiveau()} enregistré`, `Perte acceptée : ${p.perte} % par semaine au plus, ${p.cash} % gardés de côté, ${p.wmax} % au plus par entreprise. La répartition et les conseils sont calculés pour vous.`]);
   if (etat.niveau === "debutant" && !estInvesti()) c.push(["info", "i", "Profil Débutant : commencez prudemment", `La répartition conseillée garde ${p.cash} % de côté et limite chaque entreprise à ${p.wmax} %. La valider en un clic est plus sûr que d'acheter titre par titre.`]);
   if (!estInvesti()) {
     c.push(["info", "i", "Capital non investi", `Vos ${eur0(V)} sont en liquidités. Consultez l'onglet « Répartition » : vous pouvez valider la répartition proposée en un clic.`]);
@@ -936,26 +937,29 @@ function rendreDecouvrir() {
   }).join("");
 }
 
-/* Écran de choix du profil : imposé tant qu'aucun profil n'est choisi, puis il ne revient plus */
-function afficherChoixProfil(visible) {
-  $("choix-profil").hidden = !visible;
-  document.body.classList.toggle("choix-ouvert", visible);
-  if (visible) { rendreDecouvrir(); const b = document.querySelector("#niveaux .niveau"); if (b) b.focus(); }
+/*
+ * Mode découverte : à la première visite, seule la page Découvrir est visible (pas d'onglets).
+ * Elle se termine par le choix du profil ; une fois le profil choisi, la page disparaît.
+ */
+let modeDecouverte = false, niveauJusteChoisi = false;
+function entrerDecouverte() {
+  modeDecouverte = true;
+  document.body.classList.add("mode-decouverte");
+  ouvrirOnglet("decouvrir");
+  window.scrollTo(0, 0);
 }
 
 function choisirNiveau(id) {
   const n = Finance.NIVEAUX[id]; if (!n) return;
-  afficherChoixProfil(false);
-  ouvrirOnglet("decouvrir");
+  modeDecouverte = false; niveauJusteChoisi = true;
+  document.body.classList.remove("mode-decouverte");
+  ouvrirOnglet("tableau");
   window.scrollTo(0, 0);
   etat.niveau = id;
   etat.params = { ...etat.params, ...n.params };
   sauver(); profilAffiche = false;
   if (marche[TITRES[0].sym]) { analyser(); analyserFacteurs(); majSemaine(); }
   rendre();
-  const m = $("niveau-msg");
-  m.innerHTML = `Profil <b>${n.nom}</b> enregistré : la répartition et les conseils sont calculés pour vous.`;
-  m.className = "msg ok";
 }
 
 /* ---------- Profil ---------- */
@@ -1098,6 +1102,8 @@ function rendreInfos() {
    ===================================================================== */
 function ouvrirOnglet(id) {
   if (id === "profil") id = "infos";
+  if (modeDecouverte) id = "decouvrir";            // tant que le profil n'est pas choisi
+  else if (id === "decouvrir") id = "tableau";     // la page Découvrir ne revient plus ensuite
   const b = document.querySelector(`.onglet[data-onglet="${id}"]`); if (!b) return;
   document.querySelectorAll(".onglet").forEach(x => x.classList.toggle("actif", x === b));
   document.querySelectorAll(".panneau").forEach(p => p.classList.toggle("actif", p.id === id));
@@ -1106,19 +1112,21 @@ function ouvrirOnglet(id) {
 }
 document.querySelectorAll(".onglet").forEach(b => b.addEventListener("click", () => { ouvrirOnglet(b.dataset.onglet); rendre(); }));
 const ongletDemande = location.hash.replace(/^#\/?/, ""); // accepte aussi les anciens liens « #onglet »
-if (ongletDemande) ouvrirOnglet(ongletDemande);
-else if (!etat.niveau) ouvrirOnglet("decouvrir");
-if (!etat.niveau) afficherChoixProfil(true);
+if (!etat.niveau) entrerDecouverte();
+else if (ongletDemande) ouvrirOnglet(ongletDemande);
 
 $("btn-rafraichir").addEventListener("click", actualiser);
 document.addEventListener("click", e => {
   const niv = e.target.closest("[data-niveau]");
   if (niv) { choisirNiveau(niv.dataset.niveau); return; }
   const a = e.target.closest("[data-aller]"); if (!a) return;
+  if (a.dataset.aller === "profil-risque") { $("profil-risque").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   ouvrirOnglet(a.dataset.aller); rendre(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
 $("btn-changer-profil").addEventListener("click", () => {
-  if (confirm("Changer de profil d'investisseur ? La répartition conseillée, les conseils et les garde-fous seront recalculés. Vos positions actuelles ne sont pas modifiées.")) afficherChoixProfil(true);
+  if (!confirm("Changer de profil d'investisseur ? La répartition conseillée, les conseils et les garde-fous seront recalculés. Vos positions actuelles ne sont pas modifiées.")) return;
+  entrerDecouverte(); rendre();
+  $("profil-risque").scrollIntoView({ block: "start" });
 });
 ["ordre-titre", "ordre-sens", "ordre-mode", "ordre-valeur"].forEach(id => $(id).addEventListener("input", majApercu));
 $("prev-titre").addEventListener("change", graphCone);
