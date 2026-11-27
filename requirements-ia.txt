@@ -1,0 +1,5 @@
+# Dépendances de la note d'actualité (FinBERT), utilisées par generer_donnees.py
+# Version CPU de PyTorch : plus légère, suffisante pour quelques titres
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+transformers

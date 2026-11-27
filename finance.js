@@ -8,6 +8,7 @@ const Finance = (() => {
   const POIDS_HISTO = 0.5;       // poids de l'historique dans l'estimation (rétrécissement)
   const TAUX_SANS_RISQUE = 0.02; // proche du taux monétaire de la zone euro
   const Z95 = 1.6449, Z99 = 2.3263;
+  const AJUST_ACTU_MAX = 0.02;   // effet maximal de l'actualité sur le rendement espéré : ±2 points
 
   const moyenne = a => a.reduce((s, x) => s + x, 0) / a.length;
   const ecartType = a => {
@@ -91,6 +92,12 @@ const Finance = (() => {
     let pire = 0;
     for (let i = h; i < prix.length; i++) pire = Math.min(pire, prix[i] / prix[i - h] - 1);
     return pire;
+  }
+
+  /* Ajustement du rendement espéré selon la note d'actualité FinBERT (-1 à +1), plafonné à ±2 points */
+  function ajustementActu(note) {
+    if (typeof note !== "number" || !Number.isFinite(note)) return 0;
+    return Math.max(-1, Math.min(1, note)) * AJUST_ACTU_MAX;
   }
 
   /* Signal technique de court terme (horizon semaine) */
@@ -271,7 +278,7 @@ const Finance = (() => {
   }
 
   return {
-    JOURS_AN, JOURS_SEMAINE, PRIOR_RENDEMENT, POIDS_HISTO, TAUX_SANS_RISQUE,
+    JOURS_AN, JOURS_SEMAINE, PRIOR_RENDEMENT, POIDS_HISTO, TAUX_SANS_RISQUE, AJUST_ACTU_MAX, ajustementActu,
     rendements, mm, rsi, statsTitre, signal, prevision, chemin, covariance, correlation,
     mesuresPortef, contributionsRisque, optimiser, simulerSemaine, normCdf, pireVariation,
   };

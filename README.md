@@ -34,13 +34,14 @@ Les détails techniques sont repliés par défaut : cliquer sur « ▸ » pour l
 ./tests/lancer_tests.sh
 ```
 
-- `tests/finance.test.js` : 19 tests unitaires du moteur financier (Node.js 18+, `node --test tests/`)
-- `tests/test_serveur.py` : 16 tests du serveur, des données en ligne et du code source (`python3 -m unittest discover -s tests -v`)
+- `tests/finance.test.js` : 21 tests unitaires du moteur financier (Node.js 18+, `node --test tests/`)
+- `tests/test_serveur.py` : 21 tests du serveur, des données en ligne, de la note d'actualité et du code source (le test FinBERT est ignoré si FinBERT n'est pas installé) (`python3 -m unittest discover -s tests -v`)
 
 ## Fichiers
 
 - `serveur.py` : serveur local et relais Yahoo Finance (contourne le CORS) : cours (cache 30 s) et actualités filtrées (cache 15 min)
 - `generer_donnees.py` : instantané des cours et actualités dans `data/` pour la version en ligne
+- `sentiment.py` : note d'actualité par l'IA open source FinBERT (gratuite, exécutée dans GitHub Actions) ; elle ajuste le rendement espéré de ±2 points au maximum. Dépendances : `pip install -r requirements-ia.txt`
 - `finance.js` : moteur de calcul (statistiques, covariance, optimisation Monte-Carlo, VaR, Cholesky, signaux)
 - `app.js` : interface, état du portefeuille (sauvegardé dans le navigateur), moteur de conseils
 - `index.html`, `style.css`, `vendor/chart.umd.min.js` (Chart.js 4.4)

@@ -97,6 +97,7 @@ const FACTEURS = [
 ];
 let facteurs = null; // { [sym]: { prix, j1, s1, corr: [N], beta: [N] } }
 let actus = {}, actusMaj = 0, actusErreur = null;
+let sentiments = {}; // note d'actualité FinBERT par titre (data/sentiment/, générée par generer_donnees.py)
 const INDICE = "^FCHI";
 const N = TITRES.length;
 
@@ -172,6 +173,7 @@ async function actualiser() {
     const syms = [...TITRES.map(t => t.sym), INDICE];
     const res = await Promise.all(syms.map(chargerTitre));
     syms.forEach((s, i) => marche[s] = res[i]);
+    await chargerSentiments();
     derniereMaj = new Date(); erreurDonnees = null;
     analyser();
     majSemaine();
@@ -218,6 +220,13 @@ function analyserFacteurs() {
   facteurs = out;
 }
 
+/* Facultatif : sans note d'actualité, le rendement espéré n'est pas ajusté */
+async function chargerSentiments() {
+  const res = await Promise.allSettled(TITRES.map(t => fetch(`data/sentiment/${nomFichier(t.sym)}?v=${Math.floor(Date.now() / 60000)}`)
+    .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))));
+  res.forEach((r, i) => { if (r.status === "fulfilled") sentiments[TITRES[i].sym] = r.value; });
+}
+
 async function chargerActus() {
   if (Date.now() - actusMaj < 15 * 60000) return;
   actusMaj = Date.now();
@@ -245,14 +254,16 @@ function analyser() {
   const stats = prix.map(Finance.statsTitre);
   const C = Finance.covariance(prix.map(Finance.rendements));
   const corr = Finance.correlation(C);
-  const mu = stats.map(s => s.mu);
+  // rendement espéré = estimation historique rétrécie + ajustement d'actualité (FinBERT, ±2 points max)
+  const ajustActu = TITRES.map(t => Finance.ajustementActu((sentiments[t.sym] || {}).score));
+  const mu = stats.map((s, i) => s.mu + ajustActu[i]);
   const p = etat.params, cashMin = p.cash / 100;
   const opt = Finance.optimiser(mu, C, {
     cashMin, wMax: Math.max(p.wmax / 100, (1 - cashMin) / N + 0.01),
     perteMax: p.perte / 100, objectif: p.objectif / 100,
   });
   const signaux = TITRES.map((t, i) => Finance.signal(stats[i], marche[t.sym].prix));
-  analyse = { dates, prix, stats, C, corr, mu, opt, signaux };
+  analyse = { dates, prix, stats, C, corr, mu, ajustActu, opt, signaux };
 }
 
 /* ---------- Valorisation ---------- */
@@ -631,14 +642,18 @@ function justification(i) {
     : `il reste pour garder au moins 5 % sur chaque titre`;
   const morceaux = [];
   if (w[i] >= moyW + 0.03) morceaux.push(`<b>Poids renforcé</b> : c'est le ${rang} titre du panier pour le gain obtenu par rapport au risque${correlMoy < 0.2 ? ", et il évolue indépendamment des autres" : ""}.`);
-  else if (w[i] <= moyW - 0.05) morceaux.push(`<b>Poids réduit</b> : ${s.mu < 0 ? "gain espéré négatif" : s.sharpe < 0.3 ? "gain trop faible par rapport au risque" : "d'autres titres font mieux"}. Sa part est réduite, mais ${pourquoiGarde}.`);
+  else if (w[i] <= moyW - 0.05) morceaux.push(`<b>Poids réduit</b> : ${analyse.mu[i] < 0 ? "gain espéré négatif" : s.sharpe < 0.3 ? "gain trop faible par rapport au risque" : "d'autres titres font mieux"}. Sa part est réduite, mais ${pourquoiGarde}.`);
   else morceaux.push(`<b>Poids intermédiaire</b> : ${rangSharpe}ᵉ titre sur ${N} pour le gain par rapport au risque. C'est un compromis entre gain et diversification.`);
-  morceaux.push(`Gain espéré : ${pct(s.mu)} par an. Variations habituelles : environ ±${pct(s.sigma, 0)} sur un an.`);
+  const aj = analyse.ajustActu[i];
+  morceaux.push(`Gain espéré : ${pct(analyse.mu[i])} par an${aj ? ` (dont ${aj > 0 ? "+" : "−"}${num(Math.abs(aj) * 100, 1)} point lié à l'actualité)` : ""}. Variations habituelles : environ ±${pct(s.sigma, 0)} sur un an.`);
   morceaux.push(`Il pèse ${pct(rc, 0)} du risque du portefeuille pour ${pct(w[i], 0)} du capital, et évolue surtout comme ${TITRES[jPlus].court}.`);
   morceaux.push(`Situation actuelle : ${enClair(i).toLowerCase()}.`);
-  const recentes = (actus[t.sym] || []).slice(0, 2);
-  if (recentes.length) morceaux.push(`<span class="actu-justif"><b>Actualité récente</b> : ${recentes.map(a =>
-    `<a href="${esc(a.lien)}" target="_blank" rel="noopener noreferrer">« ${esc(a.titre)} »</a> (${esc(a.source)}, ${ilYa(a.date)})`).join(" ; ")}.</span>`);
+  const se = sentiments[t.sym];
+  const noteTxt = n => `${n >= 0 ? "+" : "−"}${num(Math.abs(n), 2)}`;
+  const recentes = se && se.articles.length ? se.articles.slice(0, 2) : (actus[t.sym] || []).slice(0, 2);
+  if (recentes.length) morceaux.push(`<span class="actu-justif"><b>Actualité récente</b>${se && se.articles.length
+    ? ` : ton jugé <b>${se.ton}</b> par l'IA FinBERT (note ${noteTxt(se.score)} sur une échelle de −1 à +1)` : ""} : ${recentes.map(a =>
+    `<a href="${esc(a.lien)}" target="_blank" rel="noopener noreferrer">« ${esc(a.titre)} »</a> (${esc(a.source)}, ${ilYa(a.date)}${a.note != null ? `, note ${noteTxt(a.note)}` : ""})`).join(" ; ")}.</span>`);
   const role = t.role.charAt(0).toUpperCase() + t.role.slice(1) + ".";
   return `${role} <details><summary>Pourquoi ce poids ?</summary>${morceaux.join(" ")}</details>`;
 }
@@ -680,7 +695,7 @@ function rendreRepartition(avecGraph) {
 
   $("methode").innerHTML = `
     <p><b>1. Données.</b> On utilise un an de cours de clôture journaliers réels (Yahoo Finance), alignés sur les séances communes aux cinq titres (${analyse.dates.length} séances).</p>
-    <p><b>2. Estimation du rendement espéré.</b> La moyenne historique sur un an est très bruitée. On la « rétrécit » donc vers un a priori de long terme : μ = ${pct(Finance.POIDS_HISTO, 0)} × rendement historique annualisé + ${pct(1 - Finance.POIDS_HISTO, 0)} × ${pct(Finance.PRIOR_RENDEMENT, 0)} (prime de risque actions). Le risque est mesuré par la matrice de covariance annualisée (× 252).</p>
+    <p><b>2. Estimation du rendement espéré.</b> La moyenne historique sur un an est très bruitée. On la « rétrécit » donc vers un a priori de long terme : μ = ${pct(Finance.POIDS_HISTO, 0)} × rendement historique annualisé + ${pct(1 - Finance.POIDS_HISTO, 0)} × ${pct(Finance.PRIOR_RENDEMENT, 0)} (prime de risque actions). On y ajoute un <b>ajustement d'actualité</b> : l'IA open source FinBERT, spécialisée dans la presse financière, note chaque titre d'article de −1 (négatif) à +1 (positif) ; la moyenne, pondérée par la fraîcheur des articles, modifie le rendement espéré de ±${pct(Finance.AJUST_ACTU_MAX, 0)} au maximum. Ce plafond limite l'effet des erreurs de l'IA et évite de compter deux fois une nouvelle déjà intégrée au cours. Le risque est mesuré par la matrice de covariance annualisée (× 252).</p>
     <p><b>3. Contraintes issues du profil.</b> Liquidités ≥ ${p.cash} %. Chaque titre entre 5 % et ${p.wmax} % (diversification minimale, concentration acceptée pour un profil dynamique). Perte potentielle sur une semaine limitée à ${p.perte} % : VaR paramétrique 99 % = −(μ·5/252 − 2,33·σ·√(5/252)).</p>
     <p><b>4. Choix.</b> On simule 5 000 portefeuilles aléatoires (méthode de Monte-Carlo). Parmi ceux qui respectent la limite de perte et atteignent l'objectif de ${p.objectif} %, on retient celui qui a le <b>meilleur ratio de Sharpe</b>, c'est-à-dire le meilleur rendement par unité de risque. Si aucun n'atteint l'objectif, on retient le rendement espéré le plus élevé, et la poche de liquidités est relevée si nécessaire.</p>
     <p><b>5. Validation.</b> Le client valide la répartition. Les ordres sont calculés titre par titre, ventes d'abord puis achats, frais inclus.</p>`;

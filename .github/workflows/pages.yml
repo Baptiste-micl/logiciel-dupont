@@ -28,7 +28,16 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Rafraîchir les cours et actualités
+          cache: pip
+          cache-dependency-path: requirements-ia.txt
+      - name: Modèle FinBERT en cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: finbert-v1
+      - name: Installer FinBERT (note d'actualité)
+        run: pip install -r requirements-ia.txt
+      - name: Rafraîchir les cours, actualités et notes d'actualité
         run: python3 generer_donnees.py
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

@@ -17,6 +17,7 @@ import urllib.request
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
 import generer_donnees  # noqa: E402
+import sentiment  # noqa: E402
 import serveur  # noqa: E402
 
 
@@ -31,6 +32,11 @@ def reseau_disponible():
 
 
 RESEAU = reseau_disponible()
+try:
+    import transformers  # noqa: F401
+    FINBERT = True
+except ImportError:
+    FINBERT = False
 
 
 def lire_json(chemin):
@@ -142,6 +148,45 @@ class TestDonneesStatiques(unittest.TestCase):
     def test_D05_nojekyll_present(self):
         # sans lui, GitHub Pages ignore les fichiers commençant par « _ » (_FCHI.json…)
         self.assertTrue(os.path.exists(os.path.join(RACINE, ".nojekyll")))
+
+
+class TestSentiment(unittest.TestCase):
+    """Note d'actualité (sentiment.py). T05 exécute FinBERT s'il est installé."""
+    T0 = 1_800_000_000
+
+    def test_T01_moyenne_ponderee_par_fraicheur(self):
+        articles = [{"date": self.T0, "note": 1.0}, {"date": self.T0 - 72 * 3600, "note": -1.0}]
+        # l'article de 3 jours pèse moitié moins : (1 × 1 + 0,5 × -1) / 1,5 = 0,333
+        self.assertAlmostEqual(sentiment.agreger(articles, self.T0), 1 / 3, places=3)
+
+    def test_T02_articles_trop_anciens_ignores(self):
+        articles = [{"date": self.T0 - 20 * 86400, "note": -1.0}, {"date": self.T0, "note": 0.4}]
+        self.assertAlmostEqual(sentiment.agreger(articles, self.T0), 0.4)
+        self.assertEqual(sentiment.agreger([], self.T0), 0.0)
+
+    def test_T03_ton(self):
+        self.assertEqual(sentiment.ton(0.5), "positif")
+        self.assertEqual(sentiment.ton(-0.3), "négatif")
+        self.assertEqual(sentiment.ton(0.05), "neutre")
+
+    def test_T04_fichiers_de_notes(self):
+        for sym in serveur.RECHERCHES_ACTUS:
+            with self.subTest(symbole=sym):
+                d = lire_json(os.path.join(RACINE, "data", "sentiment", generer_donnees.nom(sym)))
+                self.assertEqual(d["symbole"], sym)
+                self.assertGreaterEqual(d["score"], -1)
+                self.assertLessEqual(d["score"], 1)
+                for a in d["articles"]:
+                    self.assertTrue(-1 <= a["note"] <= 1)
+
+    @unittest.skipUnless(FINBERT, "FinBERT non installé (pip install -r requirements-ia.txt)")
+    def test_T05_finbert_reconnait_le_ton_et_reste_reproductible(self):
+        titres = ["Company reports record profit and raises its full-year guidance",
+                  "Shares plunge after the group issues a profit warning"]
+        notes = sentiment.noter_titres(titres)
+        self.assertGreater(notes[0], 0.5)
+        self.assertLess(notes[1], -0.5)
+        self.assertEqual(notes, sentiment.noter_titres(titres))  # même titre, même note
 
 
 class TestCodeSource(unittest.TestCase):

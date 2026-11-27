@@ -3,10 +3,12 @@
 Génère les données statiques (cours + actualités) pour la version en ligne
 (GitHub Pages ne peut pas exécuter serveur.py).
 
-    python3 generer_donnees.py      ->  data/chart/<symbole>.json, data/actus/<symbole>.json
+    python3 generer_donnees.py      ->  data/chart/<symbole>.json, data/actus/<symbole>.json,
+                                        data/sentiment/<symbole>.json (si FinBERT est installé)
 
 En cas d'échec pour un symbole, le fichier existant est conservé.
 """
+import json
 import os
 import re
 import sys
@@ -41,7 +43,30 @@ def main():
         except Exception as e:
             erreurs += 1
             print(f"actus {sym} : {e}", file=sys.stderr)
+    erreurs += noter_actualites()
     print(f"Données générées ({erreurs} erreur(s)).")
+
+
+def noter_actualites():
+    """Note d'actualité par FinBERT. Sans les dépendances IA, les notes existantes sont conservées."""
+    try:
+        import sentiment
+        import transformers  # noqa: F401
+    except ImportError:
+        print("FinBERT non installé (pip install -r requirements-ia.txt) : notes d'actualité inchangées.")
+        return 0
+    erreurs = 0
+    for sym in sorted(serveur.RECHERCHES_ACTUS):
+        try:
+            with open(os.path.join(SORTIE, "actus", nom(sym)), encoding="utf-8") as f:
+                actus = json.load(f)["actus"]
+            res = sentiment.analyser_societe(sym, actus)
+            ecrire(os.path.join(SORTIE, "sentiment", nom(sym)), json.dumps(res, ensure_ascii=False).encode())
+            print(f"{sym} : note d'actualité {res['score']:+.2f} ({res['ton']}, {len(res['articles'])} articles)")
+        except Exception as e:
+            erreurs += 1
+            print(f"sentiment {sym} : {e}", file=sys.stderr)
+    return erreurs
 
 
 if __name__ == "__main__":

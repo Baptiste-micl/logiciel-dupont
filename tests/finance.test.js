@@ -152,3 +152,20 @@ test("F19 Monte-Carlo cohérent avec la VaR paramétrique (écart < 1 point)", (
   const s = F.simulerSemaine(w, mu5, C5, 0.10, 20000), m = F.mesuresPortef(w, mu5, C5);
   proche(s.var99, m.var99s, 0.01);
 });
+
+test("F20 ajustement d'actualité : proportionnel à la note, plafonné à ±2 points", () => {
+  proche(F.ajustementActu(0.5), 0.01);
+  proche(F.ajustementActu(1), 0.02);
+  proche(F.ajustementActu(-3), -0.02);   // note hors échelle : plafonnée
+  assert.equal(F.ajustementActu(undefined), 0); // pas de note : pas d'ajustement
+  assert.equal(F.ajustementActu(NaN), 0);
+});
+
+test("F21 actualité positive : poids du titre augmenté, toutes contraintes respectées", () => {
+  const sans = F.optimiser(mu5, C5, params).retenu;
+  const mu = mu5.map((m, i) => m + (i === 2 ? F.ajustementActu(1) : 0));
+  const avec = F.optimiser(mu, C5, params).retenu;
+  assert.ok(avec.w[2] >= sans.w[2] - 1e-9, `${avec.w[2]} < ${sans.w[2]}`);
+  avec.w.forEach(x => assert.ok(x >= 0.05 - 1e-9 && x <= 0.35 + 1e-9));
+  assert.ok(avec.var99s <= params.perteMax);
+});
