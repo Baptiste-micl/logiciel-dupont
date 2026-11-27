@@ -205,6 +205,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .bandeau-erreur { background: #fbe9e1; border: 1px solid var(--alerte); color: #7a2e10; padding: 10px 14px; border-radius: 8px; }
 
 .pied { text-align: center; color: var(--muet); font-size: 12px; padding: 20px 24px 30px; }
+.pied-liens { margin-bottom: 8px; color: var(--encre-2); }
+.pied-liens a { color: var(--accent-fonce); }
 
 @media (max-width: 640px) {
   .grille-2 { grid-template-columns: 1fr; }
