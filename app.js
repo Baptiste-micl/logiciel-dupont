@@ -969,9 +969,18 @@ function rendreProfil() {
     QUESTIONNAIRE.map(([q, r, l]) => `<tr><td>${q}</td><td>${r}</td><td style="font-weight:400;color:var(--encre-2)">${l}</td></tr>`).join("");
   if (profilAffiche) return;
   profilAffiche = true;
+  const sel = $("p-niveau");
+  if (!sel.options.length) sel.innerHTML = Object.entries(Finance.NIVEAUX).map(([id, n]) => `<option value="${id}">${n.nom}</option>`).join("");
+  sel.value = etat.niveau || "avance";
+  aideNiveau();
   const p = etat.params;
   const champs = { "p-capital": p.capital, "p-objectif": p.objectif, "p-perte": p.perte, "p-cash": p.cash, "p-wmax": p.wmax, "p-courtage": p.courtage, "p-ttf": p.ttf };
   Object.entries(champs).forEach(([id, v]) => { $(id).value = v; });
+}
+
+function aideNiveau() {
+  const n = Finance.NIVEAUX[$("p-niveau").value];
+  $("p-niveau-aide").textContent = n ? `${n.accroche}. ${n.garde}.` : "";
 }
 
 /* ---------- Facteurs de marché ---------- */
@@ -1123,11 +1132,6 @@ document.addEventListener("click", e => {
   if (a.dataset.aller === "profil-risque") { $("profil-risque").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   ouvrirOnglet(a.dataset.aller); rendre(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
-$("btn-changer-profil").addEventListener("click", () => {
-  if (!confirm("Changer de profil d'investisseur ? La répartition conseillée, les conseils et les garde-fous seront recalculés. Vos positions actuelles ne sont pas modifiées.")) return;
-  entrerDecouverte(); rendre();
-  $("profil-risque").scrollIntoView({ block: "start" });
-});
 ["ordre-titre", "ordre-sens", "ordre-mode", "ordre-valeur"].forEach(id => $(id).addEventListener("input", majApercu));
 $("prev-titre").addEventListener("change", graphCone);
 $("det-analyse").addEventListener("toggle", () => { if ($("det-analyse").open) rendre(); });
@@ -1167,12 +1171,25 @@ $("btn-valider-repart").addEventListener("click", () => {
   $("repart-msg").textContent = ko.length ? `${res.length - ko.length} ordre(s) exécuté(s), ${ko.length} refusé(s) : ${ko.map(r => r.msg).join(" ")}` : `${res.length} ordre(s) exécuté(s). Répartition appliquée.`;
 });
 
+$("p-niveau").addEventListener("change", () => {
+  const n = Finance.NIVEAUX[$("p-niveau").value]; if (!n) return;
+  ["objectif", "perte", "cash", "wmax"].forEach(k => { $("p-" + k).value = n.params[k]; });
+  aideNiveau();
+  const m = $("profil-msg");
+  m.textContent = `Limites du profil ${n.nom} reportées ci-dessus : cliquez sur « Enregistrer » pour l'appliquer.`; m.className = "msg";
+});
+
 $("form-profil").addEventListener("submit", e => {
   e.preventDefault();
   const v = id => parseFloat($(id).value);
   const n = { capital: v("p-capital"), objectif: v("p-objectif"), perte: v("p-perte"), cash: v("p-cash"), wmax: v("p-wmax"), courtage: v("p-courtage"), ttf: v("p-ttf") };
   if (Object.values(n).some(x => isNaN(x) || x < 0)) { const m = $("profil-msg"); m.textContent = "Valeurs invalides."; m.className = "msg ko"; return; }
   let msg = "Paramètres enregistrés. Répartition et conseils recalculés.";
+  const choisi = $("p-niveau").value;
+  if (Finance.NIVEAUX[choisi] && choisi !== etat.niveau) {
+    etat.niveau = choisi; niveauJusteChoisi = true;
+    msg = `Profil ${Finance.NIVEAUX[choisi].nom} enregistré. Répartition, conseils et garde-fous recalculés.`;
+  }
   const niv = etat.niveau && Finance.NIVEAUX[etat.niveau];
   if (niv && niv.strict) {
     const l = niv.params, avant = { ...n };

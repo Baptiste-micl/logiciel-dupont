@@ -263,6 +263,9 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .mode-decouverte .onglets, .mode-decouverte #badge-niveau { visibility: hidden; }
 body:not(.mode-decouverte) .onglet[data-onglet="decouvrir"] { display: none; }
 .carte-choix { border: 2px solid var(--accent); }
+.form-profil .champ-niveau { grid-column: 1 / -1; max-width: 640px; }
+.form-profil .champ-niveau select { max-width: 260px; }
+.aide-champ { color: var(--muet); font-size: 12px; }
 .pastille-niveau.a-choisir { background: #fff6e0; border-color: var(--vigilance); color: #7a5200; }
 
 /* Profil Débutant : on masque l'analyse technique détaillée */

@@ -208,6 +208,8 @@
     <details class="carte">
       <summary>Paramètres du client</summary>
       <form id="form-profil" class="form-profil">
+        <label class="champ-niveau">Profil d'investisseur <select id="p-niveau"></select>
+          <span id="p-niveau-aide" class="aide-champ"></span></label>
         <label>Capital (€) <input type="number" id="p-capital" min="1000" step="1000"></label>
         <label>Objectif annuel (%) <input type="number" id="p-objectif" min="0" max="50" step="0.5"></label>
         <label>Perte max. par semaine (%) <input type="number" id="p-perte" min="1" max="50" step="0.5"></label>
@@ -217,7 +219,6 @@
         <label>TTF à l'achat (%) <input type="number" id="p-ttf" min="0" max="2" step="0.1"></label>
         <div class="actions">
           <button type="submit" class="btn btn-primaire">Enregistrer</button>
-          <button type="button" id="btn-changer-profil" class="btn">Changer de profil d'investisseur</button>
           <button type="button" id="btn-reset" class="btn btn-danger">Réinitialiser le portefeuille</button>
         </div>
         <p id="profil-msg" class="msg"></p>
