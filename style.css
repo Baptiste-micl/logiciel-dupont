@@ -209,6 +209,62 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .pied-liens a { color: var(--accent-fonce); }
 .actu-justif { display: block; margin-top: 6px; }
 
+/* ---------- Découvrir ---------- */
+.hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 28px; align-items: center; padding: 32px; background: linear-gradient(135deg, #f1f6fd, var(--carte)); }
+.hero-sur { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-fonce); }
+.hero-titre { font-size: 32px; line-height: 1.15; margin: 0 0 10px; }
+.hero-intro { font-size: 16px; color: var(--encre-2); margin: 0; max-width: 60ch; }
+.btn-grand { padding: 11px 18px; font-size: 15px; font-weight: 600; }
+.hero-chiffres { display: flex; flex-direction: column; gap: 10px; }
+.hero-chiffre { background: var(--carte); border: 1px solid var(--bord); border-radius: var(--rayon); padding: 12px 16px; display: flex; flex-direction: column; }
+.hero-chiffre span { font-size: 12px; color: var(--encre-2); }
+.hero-chiffre b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.hero-chiffre small { font-size: 12px; color: var(--muet); }
+
+.etape { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+.etape span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 14px; flex: 0 0 auto; }
+
+.grille-niveaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.niveau { font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: var(--rayon); border: 2px solid var(--bord); background: var(--carte); color: var(--encre); }
+.niveau:hover { border-color: var(--accent); }
+.niveau:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.niveau.choisi { border-color: var(--accent); background: #f1f6fd; }
+.niveau-nom { font-size: 18px; font-weight: 700; }
+.niveau-accroche { color: var(--encre-2); margin-bottom: 4px; }
+.niveau-ligne { font-size: 13px; color: var(--encre-2); }
+.niveau-ligne b { color: var(--encre); font-variant-numeric: tabular-nums; }
+.niveau-garde { font-size: 12.5px; color: var(--encre-2); border-top: 1px solid var(--grille); padding-top: 8px; margin-top: 4px; flex: 1; }
+.niveau-choix { margin-top: 6px; font-weight: 600; color: var(--accent-fonce); }
+.niveau.choisi .niveau-choix { color: var(--bon-texte); }
+
+.liste-actus { list-style: none; margin: 0; padding: 0; }
+.liste-actus li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--grille); font-size: 13.5px; }
+.liste-actus li:last-child { border-bottom: 0; }
+.liste-actus .puce { margin-top: 5px; flex: 0 0 auto; }
+.liste-actus a { color: var(--encre); text-decoration: none; }
+.liste-actus a:hover { color: var(--accent-fonce); text-decoration: underline; }
+.liste-actus li span { display: block; color: var(--muet); font-size: 12px; margin-top: 2px; }
+.liste-actus li .ton { display: inline-block; margin-top: 0; }
+.ton { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+.ton.positif { background: #e6f4e6; color: var(--bon-texte); }
+.ton.negatif { background: #fbe9e1; color: #9a3a14; }
+.ton.neutre { background: var(--page); color: var(--encre-2); border: 1px solid var(--bord); }
+
+.grille-entreprises { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.entreprise { background: var(--surface); border: 1px solid var(--bord); border-radius: var(--rayon); padding: 14px; }
+.entreprise h3 { margin: 0; font-size: 15px; color: var(--encre); }
+.entreprise .secteur { margin: 2px 0 8px; font-size: 12px; color: var(--encre-2); }
+.entreprise p { margin: 0 0 6px; font-size: 13px; color: var(--encre-2); }
+.entreprise .entreprise-cours { color: var(--encre); font-variant-numeric: tabular-nums; }
+
+.pastille-niveau { cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; color: var(--accent-fonce); }
+.pastille-niveau.a-choisir { background: #fff6e0; border-color: var(--vigilance); color: #7a5200; }
+
+/* Profil Débutant : on masque l'analyse technique détaillée */
+.mode-simple .avance-seul { display: none; }
+
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+
 @media (max-width: 640px) {
   .grille-2 { grid-template-columns: 1fr; }
   main { padding: 14px; }

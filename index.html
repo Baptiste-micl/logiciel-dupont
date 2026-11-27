@@ -14,6 +14,7 @@
     <h1>Weekly Edge</h1>
   </div>
   <nav class="onglets" role="tablist">
+    <button class="onglet" data-onglet="decouvrir">Découvrir</button>
     <button class="onglet actif" data-onglet="tableau">Accueil</button>
     <button class="onglet" data-onglet="repartition">Répartition</button>
     <button class="onglet" data-onglet="marche">Ordres</button>
@@ -21,12 +22,53 @@
     <button class="onglet" data-onglet="infos">Infos &amp; profil</button>
   </nav>
   <div class="etat">
+    <button id="badge-niveau" class="pastille pastille-niveau" title="Changer de profil d'investisseur">Profil : à choisir</button>
     <span id="etat-donnees" class="pastille">Chargement…</span>
     <button id="btn-rafraichir" class="btn btn-ghost" title="Actualiser les cours">↻</button>
   </div>
 </header>
 
 <main>
+  <!-- ============ DÉCOUVRIR (première visite) ============ -->
+  <section id="decouvrir" class="panneau">
+    <div class="carte hero">
+      <div class="hero-texte">
+        <p class="hero-sur">Weekly Edge · conseil en investissement</p>
+        <h2 class="hero-titre">Bienvenue Monsieur Dupont</h2>
+        <p class="hero-intro">Placez votre capital sur cinq grandes entreprises françaises. Le logiciel calcule une répartition pour vous, l'explique en mots simples et adapte ses conseils à votre expérience.</p>
+        <div class="actions">
+          <button class="btn btn-primaire btn-grand" data-aller="profil-risque">Choisir mon profil</button>
+          <button class="btn btn-grand" data-aller="tableau">Voir mon tableau de bord</button>
+        </div>
+      </div>
+      <div class="hero-chiffres" id="hero-chiffres"></div>
+    </div>
+
+    <div class="carte" id="profil-risque">
+      <h2 class="etape"><span>1</span>Votre profil d'investisseur</h2>
+      <p class="aide">C'est le réglage le plus important. Il fixe la perte que vous acceptez, la part gardée de côté et les garde-fous sur vos achats. Vous pourrez le changer à tout moment.</p>
+      <div class="grille-niveaux" id="niveaux"></div>
+      <p id="niveau-msg" class="msg"></p>
+    </div>
+
+    <div class="grille-2">
+      <div class="carte">
+        <h2 class="etape"><span>2</span>Les mots à connaître</h2>
+        <dl id="definitions" class="lexique"></dl>
+      </div>
+      <div class="carte">
+        <h2 class="etape"><span>3</span>L'actualité de vos entreprises</h2>
+        <p class="aide">Ton de chaque article jugé par l'IA FinBERT. Les titres sont en anglais.</p>
+        <ul id="decouvrir-actus" class="liste-actus"></ul>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2 class="etape"><span>4</span>Vos cinq entreprises</h2>
+      <div id="decouvrir-titres" class="grille-entreprises"></div>
+    </div>
+  </section>
+
   <!-- ============ ACCUEIL ============ -->
   <section id="tableau" class="panneau actif">
     <p class="bienvenue">Bienvenue Monsieur Dupont</p>
@@ -76,7 +118,7 @@
       </div>
     </div>
 
-    <details class="carte" id="det-analyse">
+    <details class="carte avance-seul" id="det-analyse">
       <summary>Analyse détaillée : frontière efficiente, corrélations, méthode</summary>
       <div class="grille-2 dans-details">
         <div>

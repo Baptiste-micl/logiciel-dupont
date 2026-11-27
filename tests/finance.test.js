@@ -169,3 +169,56 @@ test("F21 actualité positive : poids du titre augmenté, toutes contraintes res
   avec.w.forEach(x => assert.ok(x >= 0.05 - 1e-9 && x <= 0.35 + 1e-9));
   assert.ok(avec.var99s <= params.perteMax);
 });
+
+/* ---------- Profils d'investisseur ---------- */
+const niv = ["debutant", "intermediaire", "avance", "expert"].map(k => F.NIVEAUX[k]);
+
+test("F22 profils : du débutant à l'expert, le risque autorisé augmente", () => {
+  for (let k = 1; k < niv.length; k++) {
+    assert.ok(niv[k].params.perte > niv[k - 1].params.perte, "perte max croissante");
+    assert.ok(niv[k].params.cash < niv[k - 1].params.cash, "liquidités min décroissantes");
+    assert.ok(niv[k].params.wmax > niv[k - 1].params.wmax, "poids max croissant");
+  }
+  assert.ok(F.NIVEAUX.debutant.strict && F.NIVEAUX.intermediaire.strict);
+  assert.ok(!F.NIVEAUX.avance.strict && !F.NIVEAUX.expert.strict);
+});
+
+const etatAchat = { cash: 500000, valeur: 500000, valeurTitre: 0 };
+
+test("F23 débutant : un achat de tout le capital est refusé, avec le montant maximal autorisé", () => {
+  const r = F.controleAchat("debutant", { ...etatAchat, cout: 500000 });
+  assert.equal(r.ok, false);
+  assert.deepEqual(Array.from(r.problemes, p => p.type).sort(), ["cash", "ordre", "poids"]);
+  proche(r.montantMax, 50000, 1e-6); // 10 % du portefeuille par achat
+  assert.equal(F.controleAchat("debutant", { ...etatAchat, cout: 50000 }).ok, true);
+});
+
+test("F24 débutant : les liquidités ne descendent jamais sous 40 %", () => {
+  // déjà 55 % investis : il reste 45 % de liquidités, donc 5 % achetables au plus
+  const e = { cash: 225000, valeur: 500000, valeurTitre: 0 };
+  proche(F.controleAchat("debutant", { ...e, cout: 0 }).montantMax, 25000, 1e-6);
+  const r = F.controleAchat("debutant", { ...e, cout: 40000 });
+  assert.equal(r.ok, false);
+  assert.equal(r.problemes[0].type, "cash");
+});
+
+test("F25 expert : l'achat passe mais le dépassement est signalé", () => {
+  const r = F.controleAchat("expert", { ...etatAchat, cout: 300000 });
+  assert.equal(r.ok, true);
+  assert.deepEqual(Array.from(r.problemes, p => p.type), ["poids"]); // 60 % > 45 %
+  assert.equal(F.controleAchat("expert", { ...etatAchat, cout: 200000 }).problemes.length, 0);
+});
+
+test("F26 répartition validée : pas de plafond par ordre, mais limites de liquidités et de poids", () => {
+  const r = F.controleAchat("debutant", { ...etatAchat, cout: 95000, plafondOrdre: false });
+  assert.equal(r.ok, true); // 19 % : sous les 20 % par titre
+  assert.equal(F.controleAchat("debutant", { ...etatAchat, cout: 120000, plafondOrdre: false }).ok, false);
+});
+
+test("F27 optimisation avec le profil Débutant : contraintes du profil respectées", () => {
+  const d = F.NIVEAUX.debutant.params;
+  const o = F.optimiser(mu5, C5, { cashMin: d.cash / 100, wMax: d.wmax / 100, perteMax: d.perte / 100, objectif: d.objectif / 100 });
+  assert.ok(o.cash >= 0.40 - 1e-9);
+  o.retenu.w.forEach(x => assert.ok(x <= 0.20 + 1e-9, `poids ${x}`));
+  if (!o.nonAdmissible) assert.ok(o.retenu.var99s <= 0.03 + 1e-9);
+});

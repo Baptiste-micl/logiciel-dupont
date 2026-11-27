@@ -235,6 +235,7 @@ async function chargerActus() {
   actusErreur = res.every(r => r.status === "rejected") ? "actualités indisponibles" : null;
   if (actusErreur) actusMaj = Date.now() - 14 * 60000; // nouvel essai dans 1 minute
   rendreActus();
+  rendreDecouvrir();
   if (analyse) rendreRepartition(false); // ajoute l'actualité aux justifications
 }
 
@@ -303,17 +304,32 @@ function frais(sens, montant) {
   return { courtage, ttf, total: courtage + ttf };
 }
 
-function executer(sym, sens, qte) {
+/* Texte d'un dépassement de limite renvoyé par Finance.controleAchat */
+function texteProbleme(pb) {
+  if (pb.type === "cash") return `vos liquidités tomberaient à ${pct(pb.valeur, 0)}, sous le minimum de ${pct(pb.limite, 0)}`;
+  if (pb.type === "poids") return `ce titre pèserait ${pct(pb.valeur, 0)} du portefeuille, au-delà de ${pct(pb.limite, 0)}`;
+  return `cet achat engage ${pct(pb.valeur, 0)} du portefeuille en une fois, au-delà de ${pct(pb.limite, 0)}`;
+}
+const nomNiveau = () => etat.niveau ? Finance.NIVEAUX[etat.niveau].nom : null;
+
+/* opts.plafondOrdre = false : ordres issus de la répartition conseillée (déjà calibrée sur le profil) */
+function executer(sym, sens, qte, opts = {}) {
   qte = Math.floor(qte);
   const P = prixDe(sym), t = TITRES.find(x => x.sym === sym);
   if (!P) return { ok: false, msg: "Cours indisponible." };
   if (qte <= 0) return { ok: false, msg: "Quantité nulle." };
   const montant = qte * P, f = frais(sens, montant);
   const pos = etat.positions[sym] || { qte: 0, pru: 0 };
-  let pv = null;
+  let pv = null, avertissement = "";
   if (sens === "achat") {
     const cout = montant + f.total;
     if (cout > etat.cash + 1e-6) return { ok: false, msg: `Liquidités insuffisantes (${eur(cout)} nécessaires, ${eur(etat.cash)} disponibles).` };
+    if (etat.niveau) {
+      const ctrl = Finance.controleAchat(etat.niveau, { cout, cash: etat.cash, valeur: valeurTotale(), valeurTitre: pos.qte * P, plafondOrdre: opts.plafondOrdre });
+      const raisons = ctrl.problemes.map(texteProbleme).join(" ; ");
+      if (!ctrl.ok) return { ok: false, msg: `Achat refusé par votre profil ${nomNiveau()} : ${raisons}. Vous pouvez acheter au plus ${eur0(ctrl.montantMax)} ${/^[aeiouyhéèê]/i.test(t.court) ? "d'" : "de "}${t.court}, frais compris.` };
+      if (raisons) avertissement = ` Attention : ${raisons}.`;
+    }
     pos.pru = (pos.pru * pos.qte + cout) / (pos.qte + qte);
     pos.qte += qte;
     etat.cash -= cout;
@@ -328,7 +344,7 @@ function executer(sym, sens, qte) {
   etat.positions[sym] = pos;
   etat.ordres.unshift({ date: Date.now(), sym, sens, qte, prix: P, frais: f.total, total: sens === "achat" ? montant + f.total : montant - f.total, pv });
   sauver();
-  return { ok: true, msg: `${sens === "achat" ? "Achat" : "Vente"} de ${qte} ${t.court} à ${eur(P)} exécuté (frais ${eur(f.total)}).` };
+  return { ok: true, msg: `${sens === "achat" ? "Achat" : "Vente"} de ${qte} ${t.court} à ${eur(P)} exécuté (frais ${eur(f.total)}).${avertissement}` };
 }
 
 function ordresVersCible(poidsCible) {
@@ -455,6 +471,7 @@ function rendre() {
   else if (derniereMaj) setEtat(`${ouvert ? "Bourse ouverte" : "Bourse fermée"} · cours à ${derniereMaj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`, ouvert ? "ok" : "ferme");
 
   rendreProfil();
+  rendreDecouvrir();
   if (!analyse) {
     const msg = !erreurDonnees ? `<div class="kpi">Chargement des cours réels…</div>` : `<div class="bandeau-erreur">Impossible de charger les cours (${esc(erreurDonnees || "…")}). Vérifiez votre connexion internet et que l'application est lancée via <b>python3 serveur.py</b>, puis cliquez sur « Actualiser ».</div>`;
     $("kpis").innerHTML = msg;
@@ -568,6 +585,8 @@ function genererConseils() {
   const sem = variationSemaine(), lim = p.perte / 100;
   const w = poidsActuels(), cashW = etat.cash / V;
 
+  if (!etat.niveau) c.push(["vigilance", "?", "Choisissez votre profil d'investisseur", "Débutant, intermédiaire, avancé ou expert : ce choix règle le risque et les garde-fous. Onglet « Découvrir »."]);
+  else if (etat.niveau === "debutant" && !estInvesti()) c.push(["info", "i", "Profil Débutant : commencez prudemment", `La répartition conseillée garde ${p.cash} % de côté et limite chaque entreprise à ${p.wmax} %. La valider en un clic est plus sûr que d'acheter titre par titre.`]);
   if (!estInvesti()) {
     c.push(["info", "i", "Capital non investi", `Vos ${eur0(V)} sont en liquidités. Consultez l'onglet « Répartition » : vous pouvez valider la répartition proposée en un clic.`]);
   }
@@ -786,7 +805,12 @@ function quantiteSaisie() {
 function majApercu() {
   const sym = $("ordre-titre").value; if (!sym || !marche[sym]) return;
   const sens = $("ordre-sens").value, q = quantiteSaisie(), P = prixDe(sym), m = q * P, f = frais(sens, m);
-  $("ordre-apercu").innerHTML = `${q} × ${eur(P)} + frais ${eur(f.total)} = <b>${eur(sens === "achat" ? m + f.total : m - f.total)}</b> ${sens === "achat" ? "débités" : "crédités"} · disponible : ${eur0(etat.cash)} · détenu : ${qteDe(sym)}`;
+  let max = "";
+  if (sens === "achat" && etat.niveau) {
+    const ctrl = Finance.controleAchat(etat.niveau, { cout: 0, cash: etat.cash, valeur: valeurTotale(), valeurTitre: qteDe(sym) * P });
+    max = ` · <b>maximum pour votre profil ${nomNiveau()} : ${eur0(ctrl.montantMax)}</b>`;
+  }
+  $("ordre-apercu").innerHTML = `${q} × ${eur(P)} + frais ${eur(f.total)} = <b>${eur(sens === "achat" ? m + f.total : m - f.total)}</b> ${sens === "achat" ? "débités" : "crédités"} · disponible : ${eur0(etat.cash)} · détenu : ${qteDe(sym)}${max}`;
 }
 
 /* ---------- Prévisions semaine ---------- */
@@ -855,6 +879,74 @@ function graphCone() {
       },
     }),
   });
+}
+
+/* ---------- Découvrir : page d'accueil pour un investisseur novice ---------- */
+const DEFINITIONS = [
+  ["Action", "Une part d'une entreprise. Son prix monte ou baisse chaque jour selon l'offre et la demande."],
+  ["Bourse et CAC 40", "La Bourse est le marché où s'échangent les actions. Le CAC 40 regroupe 40 des plus grandes entreprises françaises, dont les cinq proposées ici."],
+  ["Diversifier", "Répartir son argent entre plusieurs entreprises, pour qu'une mauvaise nouvelle sur l'une ne fasse pas tout perdre."],
+  ["Liquidités", "L'argent gardé de côté, non investi. Il ne rapporte rien, mais ne baisse pas et permet de saisir une occasion."],
+  ["Risque", "L'ampleur des variations du prix. Plus il est élevé, plus on peut gagner, mais aussi perdre, et vite."],
+  ["Perte maximale par semaine", "La baisse que vous acceptez sur une mauvaise semaine. Le portefeuille est construit pour rester en dessous 99 semaines sur 100."],
+  ["Frais", "À chaque achat : courtage de 0,10 % et taxe de 0,4 %. Acheter et vendre trop souvent coûte cher."],
+];
+
+function rendreDecouvrir() {
+  const niv = etat.niveau && Finance.NIVEAUX[etat.niveau], V = valeurTotale();
+  document.body.classList.toggle("mode-simple", etat.niveau === "debutant");
+  $("badge-niveau").textContent = niv ? `Profil : ${niv.nom}` : "Profil : à choisir";
+  $("badge-niveau").classList.toggle("a-choisir", !niv);
+
+  const chiffre = (lib, val, det) => `<div class="hero-chiffre"><span>${lib}</span><b>${val}</b><small>${det}</small></div>`;
+  $("hero-chiffres").innerHTML = [
+    chiffre("Valeur disponible", eur0(etat.cash), estInvesti() ? "en liquidités, prête à investir" : "rien n'est encore investi"),
+    chiffre("Valeur du portefeuille", marche[TITRES[0].sym] ? eur0(V) : "…", `capital de départ : ${eur0(etat.capitalInitial)}`),
+    chiffre("Votre profil", niv ? niv.nom : "À choisir", niv ? niv.accroche : "étape 1 ci-dessous"),
+  ].join("");
+
+  $("niveaux").innerHTML = Object.entries(Finance.NIVEAUX).map(([id, n]) => `
+    <button type="button" class="niveau ${etat.niveau === id ? "choisi" : ""}" data-niveau="${id}" aria-pressed="${etat.niveau === id}">
+      <span class="niveau-nom">${n.nom}</span>
+      <span class="niveau-accroche">${n.accroche}</span>
+      <span class="niveau-ligne"><b>${n.params.perte} %</b> de perte max. par semaine</span>
+      <span class="niveau-ligne"><b>${n.params.cash} %</b> gardés en liquidités au minimum</span>
+      <span class="niveau-ligne"><b>${n.params.wmax} %</b> au plus sur une entreprise</span>
+      <span class="niveau-ligne"><b>${n.params.objectif} %</b> de gain visé par an</span>
+      <span class="niveau-garde">${n.garde}</span>
+      <span class="niveau-choix">${etat.niveau === id ? "✓ Profil choisi" : "Choisir ce profil"}</span>
+    </button>`).join("");
+
+  if (!$("definitions").innerHTML) $("definitions").innerHTML = DEFINITIONS.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+
+  const articles = TITRES.flatMap(t => {
+    const se = sentiments[t.sym], liste = se && se.articles.length ? se.articles : (actus[t.sym] || []);
+    return liste.slice(0, 3).map(a => ({ ...a, t }));
+  }).sort((a, b) => b.date - a.date).slice(0, 6);
+  const ton = n => n == null ? "" : n >= 0.15 ? `<span class="ton positif">positif</span>` : n <= -0.15 ? `<span class="ton negatif">négatif</span>` : `<span class="ton neutre">neutre</span>`;
+  $("decouvrir-actus").innerHTML = articles.length ? articles.map(a => `<li>
+      <i class="puce" style="background:${a.t.couleur}"></i><div><a href="${esc(a.lien)}" target="_blank" rel="noopener noreferrer">${esc(a.titre)}</a>
+      <span>${a.t.court} · ${esc(a.source)} · ${ilYa(a.date)} ${ton(a.note)}</span></div></li>`).join("")
+    : `<li class="aide">Chargement des actualités…</li>`;
+
+  $("decouvrir-titres").innerHTML = TITRES.map((t, i) => {
+    const m = marche[t.sym], s = analyse && analyse.stats[i];
+    return `<div class="entreprise"><h3><i class="puce" style="background:${t.couleur}"></i>${t.nom}</h3>
+      <p class="secteur">${t.secteur}</p><p>${t.desc.split(". ")[0]}.</p>
+      ${m ? `<p class="entreprise-cours"><b>${eur(m.prix)}</b>${s ? ` <span class="${classeSigne(s.perf1an)}">${pct(s.perf1an, 0, true)} sur 1 an</span>` : ""}</p>` : ""}</div>`;
+  }).join("");
+}
+
+function choisirNiveau(id) {
+  const n = Finance.NIVEAUX[id]; if (!n) return;
+  etat.niveau = id;
+  etat.params = { ...etat.params, ...n.params };
+  sauver(); profilAffiche = false;
+  if (marche[TITRES[0].sym]) { analyser(); analyserFacteurs(); majSemaine(); }
+  rendre();
+  const m = $("niveau-msg");
+  m.innerHTML = `Profil <b>${n.nom}</b> enregistré : répartition et conseils recalculés. <button class="btn btn-petit" data-aller="repartition">Voir la répartition conseillée</button>`;
+  m.className = "msg ok";
 }
 
 /* ---------- Profil ---------- */
@@ -1000,19 +1092,37 @@ function ouvrirOnglet(id) {
   const b = document.querySelector(`.onglet[data-onglet="${id}"]`); if (!b) return;
   document.querySelectorAll(".onglet").forEach(x => x.classList.toggle("actif", x === b));
   document.querySelectorAll(".panneau").forEach(p => p.classList.toggle("actif", p.id === id));
-  history.replaceState(null, "", "#" + id);
+  // « #/onglet » et non « #onglet » : sinon le navigateur défile jusqu'au panneau du même id
+  history.replaceState(null, "", "#/" + id);
 }
 document.querySelectorAll(".onglet").forEach(b => b.addEventListener("click", () => { ouvrirOnglet(b.dataset.onglet); rendre(); }));
-if (location.hash) ouvrirOnglet(location.hash.slice(1));
+const ongletDemande = location.hash.replace(/^#\/?/, ""); // accepte aussi les anciens liens « #onglet »
+if (ongletDemande) ouvrirOnglet(ongletDemande);
+else if (!etat.niveau) ouvrirOnglet("decouvrir");
 
 $("btn-rafraichir").addEventListener("click", actualiser);
+document.addEventListener("click", e => {
+  const niv = e.target.closest("[data-niveau]");
+  if (niv) { choisirNiveau(niv.dataset.niveau); return; }
+  const a = e.target.closest("[data-aller]"); if (!a) return;
+  const cible = a.dataset.aller;
+  if (cible === "profil-risque") { ouvrirOnglet("decouvrir"); $("profil-risque").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  ouvrirOnglet(cible); rendre(); window.scrollTo({ top: 0, behavior: "smooth" });
+});
+$("badge-niveau").addEventListener("click", () => { ouvrirOnglet("decouvrir"); rendre(); $("profil-risque").scrollIntoView({ behavior: "smooth", block: "start" }); });
 ["ordre-titre", "ordre-sens", "ordre-mode", "ordre-valeur"].forEach(id => $(id).addEventListener("input", majApercu));
 $("prev-titre").addEventListener("change", graphCone);
 $("det-analyse").addEventListener("toggle", () => { if ($("det-analyse").open) rendre(); });
 
 $("form-ordre").addEventListener("submit", e => {
   e.preventDefault();
-  const r = executer($("ordre-titre").value, $("ordre-sens").value, quantiteSaisie());
+  const sym = $("ordre-titre").value, sens = $("ordre-sens").value, q = quantiteSaisie();
+  if (etat.niveau === "debutant" && q > 0 && prixDe(sym)) {
+    const m = q * prixDe(sym), f = frais(sens, m), t = TITRES.find(x => x.sym === sym);
+    const total = sens === "achat" ? m + f.total : m - f.total;
+    if (!confirm(`${sens === "achat" ? "Acheter" : "Vendre"} ${q} action(s) ${t.court} pour ${eur(total)}, frais de ${eur(f.total)} compris ?\n\nCela représente ${pct(total / valeurTotale())} de votre portefeuille.${sens === "vente" ? " Vendre après une baisse fige la perte." : ""}`)) return;
+  }
+  const r = executer(sym, sens, q);
   const m = $("ordre-msg"); m.textContent = r.msg; m.className = "msg " + (r.ok ? "ok" : "ko");
   rendre();
 });
@@ -1033,7 +1143,7 @@ $("btn-valider-repart").addEventListener("click", () => {
   if (!ordres.length) { $("repart-msg").textContent = "Le portefeuille est déjà conforme à la répartition conseillée."; return; }
   const recap = ordres.map(o => `• ${o.sens === "achat" ? "Acheter" : "Vendre"} ${o.qte} ${TITRES.find(t => t.sym === o.sym).court} (≈ ${eur0(o.qte * prixDe(o.sym))})`).join("\n");
   if (!confirm(`Valider la répartition conseillée ?\n\n${recap}\n\nLes ordres seront exécutés immédiatement au dernier cours.`)) return;
-  const res = ordres.map(o => executer(o.sym, o.sens, o.qte));
+  const res = ordres.map(o => executer(o.sym, o.sens, o.qte, { plafondOrdre: false }));
   const ko = res.filter(r => !r.ok);
   rendre();
   $("repart-msg").textContent = ko.length ? `${res.length - ko.length} ordre(s) exécuté(s), ${ko.length} refusé(s) : ${ko.map(r => r.msg).join(" ")}` : `${res.length} ordre(s) exécuté(s). Répartition appliquée.`;
@@ -1045,6 +1155,13 @@ $("form-profil").addEventListener("submit", e => {
   const n = { capital: v("p-capital"), objectif: v("p-objectif"), perte: v("p-perte"), cash: v("p-cash"), wmax: v("p-wmax"), courtage: v("p-courtage"), ttf: v("p-ttf") };
   if (Object.values(n).some(x => isNaN(x) || x < 0)) { const m = $("profil-msg"); m.textContent = "Valeurs invalides."; m.className = "msg ko"; return; }
   let msg = "Paramètres enregistrés. Répartition et conseils recalculés.";
+  const niv = etat.niveau && Finance.NIVEAUX[etat.niveau];
+  if (niv && niv.strict) {
+    const l = niv.params, avant = { ...n };
+    n.perte = Math.min(n.perte, l.perte); n.cash = Math.max(n.cash, l.cash); n.wmax = Math.min(n.wmax, l.wmax);
+    if (n.perte !== avant.perte || n.cash !== avant.cash || n.wmax !== avant.wmax)
+      msg += ` Votre profil ${niv.nom} limite la perte à ${l.perte} % par semaine, garde au moins ${l.cash} % de liquidités et ${l.wmax} % au plus par titre : valeurs ajustées.`;
+  }
   if (n.capital !== etat.params.capital) {
     if (!estInvesti() && !etat.ordres.length) { etat.cash = n.capital; etat.capitalInitial = n.capital; etat.semaine = null; }
     else msg += " Le nouveau capital sera pris en compte après une réinitialisation du portefeuille.";
@@ -1057,7 +1174,9 @@ $("form-profil").addEventListener("submit", e => {
 
 $("btn-reset").addEventListener("click", () => {
   if (!confirm("Réinitialiser le portefeuille ? Toutes les positions et l'historique des ordres seront effacés.")) return;
+  const niveau = etat.niveau;
   etat = nouveauPortefeuille({ ...etat.params, capital: parseFloat($("p-capital").value) || etat.params.capital });
+  etat.niveau = niveau;
   sauver(); majSemaine(); profilAffiche = false; rendre();
   const m = $("profil-msg"); m.textContent = "Portefeuille réinitialisé."; m.className = "msg ok";
 });

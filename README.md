@@ -16,10 +16,22 @@ Le site est publié sur GitHub Pages. Sans serveur Python, l'application lit les
 produits par `generer_donnees.py` ; une GitHub Action les rafraîchit toutes les 30 minutes
 pendant les heures de Bourse (cours non temps réel). En local (`localhost`), les cours restent en direct.
 
+## Profils d'investisseur
+
+| Profil | Perte max. / semaine | Liquidités min. | Max. par titre | Objectif | Garde-fous sur les achats |
+|---|---|---|---|---|---|
+| Débutant | 3 % | 40 % | 20 % | 4 % | bloqués au-delà des limites, 10 % du portefeuille au plus par achat, confirmation |
+| Intermédiaire | 5 % | 25 % | 25 % | 6 % | bloqués au-delà des limites, 20 % au plus par achat |
+| Avancé | 10 % | 10 % | 35 % | 10 % | alerte, sans blocage |
+| Expert | 12 % | 5 % | 45 % | 12 % | alertes informatives |
+
+Le profil règle l'optimisation, les conseils et les contrôles d'ordres (`Finance.NIVEAUX`, `Finance.controleAchat`). Un profil prudent ne peut pas être rendu plus risqué dans les paramètres manuels. En Débutant, l'analyse technique détaillée est masquée.
+
 ## Onglets
 
 | Onglet | Rôle |
 |---|---|
+| Découvrir | Page d'arrivée pour un novice : valeur disponible, **choix du profil d'investisseur** (débutant, intermédiaire, avancé, expert), mots à connaître, actualité, les cinq entreprises |
 | Accueil | Valeur, gain, jauges perte hebdo (limite 10 %) et objectif annuel, conseils, composition, évolution |
 | Répartition | Répartition conseillée, rôle de chaque titre (justification détaillée dépliable), validation en un clic ; analyse détaillée repliée (frontière efficiente, corrélations, méthode) |
 | Ordres | Achat/vente instantané avec frais (courtage + TTF), cours et signaux par titre, historique replié |
@@ -34,7 +46,7 @@ Les détails techniques sont repliés par défaut : cliquer sur « ▸ » pour l
 ./tests/lancer_tests.sh
 ```
 
-- `tests/finance.test.js` : 21 tests unitaires du moteur financier (Node.js 18+, `node --test tests/`)
+- `tests/finance.test.js` : 27 tests unitaires du moteur financier (Node.js 18+, `node --test tests/`)
 - `tests/test_serveur.py` : 21 tests du serveur, des données en ligne, de la note d'actualité et du code source (le test FinBERT est ignoré si FinBERT n'est pas installé) (`python3 -m unittest discover -s tests -v`)
 
 ## Fichiers

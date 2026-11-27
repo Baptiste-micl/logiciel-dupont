@@ -100,6 +100,56 @@ const Finance = (() => {
     return Math.max(-1, Math.min(1, note)) * AJUST_ACTU_MAX;
   }
 
+  /*
+   * Profils d'investisseur. Chaque niveau fixe les paramètres de risque de l'optimisation
+   * et les garde-fous sur les achats :
+   *  - strict : un achat qui dépasse une limite est refusé (débutant, intermédiaire) ;
+   *  - sinon  : l'achat passe, mais le dépassement est signalé (avancé, expert).
+   * ordreMax : part maximale du portefeuille engagée en un seul achat (null = pas de plafond).
+   */
+  const NIVEAUX = {
+    debutant: {
+      nom: "Débutant", accroche: "Je découvre la Bourse",
+      params: { objectif: 4, perte: 3, cash: 40, wmax: 20 }, ordreMax: 0.10, strict: true,
+      garde: "Achats bloqués au-delà de ces limites, 10 % du portefeuille au plus par achat, confirmation à chaque ordre",
+    },
+    intermediaire: {
+      nom: "Intermédiaire", accroche: "J'ai déjà quelques placements",
+      params: { objectif: 6, perte: 5, cash: 25, wmax: 25 }, ordreMax: 0.20, strict: true,
+      garde: "Achats bloqués au-delà de ces limites, 20 % du portefeuille au plus par achat",
+    },
+    avance: {
+      nom: "Avancé", accroche: "Je suis les marchés régulièrement",
+      params: { objectif: 10, perte: 10, cash: 10, wmax: 35 }, ordreMax: null, strict: false,
+      garde: "Alerte si un achat dépasse vos limites, sans le bloquer",
+    },
+    expert: {
+      nom: "Expert", accroche: "J'accepte de fortes variations",
+      params: { objectif: 12, perte: 12, cash: 5, wmax: 45 }, ordreMax: null, strict: false,
+      garde: "Liberté totale, alertes à titre d'information",
+    },
+  };
+
+  /*
+   * Contrôle d'un achat selon le profil.
+   * e = { cout (frais inclus), cash, valeur (du portefeuille), valeurTitre (déjà détenue), plafondOrdre }
+   * Renvoie { ok, problemes: [{ type, valeur, limite }], montantMax } ; montantMax = achat le plus
+   * gros (frais inclus) qui respecte toutes les limites du profil.
+   */
+  function controleAchat(niveau, e) {
+    const n = NIVEAUX[niveau];
+    if (!n) return { ok: true, problemes: [], montantMax: Math.max(0, e.cash) };
+    const V = e.valeur, lim = n.params, tol = 0.005, problemes = [];
+    const cashApres = (e.cash - e.cout) / V;
+    const poidsApres = (e.valeurTitre + e.cout) / V;
+    if (cashApres < lim.cash / 100 - tol) problemes.push({ type: "cash", valeur: cashApres, limite: lim.cash / 100 });
+    if (poidsApres > lim.wmax / 100 + tol) problemes.push({ type: "poids", valeur: poidsApres, limite: lim.wmax / 100 });
+    if (e.plafondOrdre !== false && n.ordreMax && e.cout > n.ordreMax * V * (1 + tol)) problemes.push({ type: "ordre", valeur: e.cout / V, limite: n.ordreMax });
+    const bornes = [e.cash - lim.cash / 100 * V, lim.wmax / 100 * V - e.valeurTitre, e.cash];
+    if (e.plafondOrdre !== false && n.ordreMax) bornes.push(n.ordreMax * V);
+    return { ok: !n.strict || problemes.length === 0, problemes, montantMax: Math.max(0, Math.min(...bornes)) };
+  }
+
   /* Signal technique de court terme (horizon semaine) */
   function signal(s, P) {
     let score = 0;
@@ -278,7 +328,7 @@ const Finance = (() => {
   }
 
   return {
-    JOURS_AN, JOURS_SEMAINE, PRIOR_RENDEMENT, POIDS_HISTO, TAUX_SANS_RISQUE, AJUST_ACTU_MAX, ajustementActu,
+    JOURS_AN, JOURS_SEMAINE, PRIOR_RENDEMENT, POIDS_HISTO, TAUX_SANS_RISQUE, AJUST_ACTU_MAX, ajustementActu, NIVEAUX, controleAchat,
     rendements, mm, rsi, statsTitre, signal, prevision, chemin, covariance, correlation,
     mesuresPortef, contributionsRisque, optimiser, simulerSemaine, normCdf, pireVariation,
   };
