@@ -226,6 +226,7 @@ async function chargerActus() {
   actusErreur = res.every(r => r.status === "rejected") ? "actualités indisponibles" : null;
   if (actusErreur) actusMaj = Date.now() - 14 * 60000; // nouvel essai dans 1 minute
   rendreActus();
+  if (analyse) rendreRepartition(false); // ajoute l'actualité aux justifications
 }
 
 function jourParis(ms) {
@@ -635,6 +636,9 @@ function justification(i) {
   morceaux.push(`Gain espéré : ${pct(s.mu)} par an. Variations habituelles : environ ±${pct(s.sigma, 0)} sur un an.`);
   morceaux.push(`Il pèse ${pct(rc, 0)} du risque du portefeuille pour ${pct(w[i], 0)} du capital, et évolue surtout comme ${TITRES[jPlus].court}.`);
   morceaux.push(`Situation actuelle : ${enClair(i).toLowerCase()}.`);
+  const recentes = (actus[t.sym] || []).slice(0, 2);
+  if (recentes.length) morceaux.push(`<span class="actu-justif"><b>Actualité récente</b> : ${recentes.map(a =>
+    `<a href="${esc(a.lien)}" target="_blank" rel="noopener noreferrer">« ${esc(a.titre)} »</a> (${esc(a.source)}, ${ilYa(a.date)})`).join(" ; ")}.</span>`);
   const role = t.role.charAt(0).toUpperCase() + t.role.slice(1) + ".";
   return `${role} <details><summary>Pourquoi ce poids ?</summary>${morceaux.join(" ")}</details>`;
 }
@@ -883,14 +887,15 @@ function rendreFacteurs() {
     </details>`);
 }
 
+function ilYa(ts) {
+  const h = (Date.now() / 1000 - ts) / 3600;
+  return h < 1 ? "il y a moins d'1 h" : h < 24 ? `il y a ${Math.floor(h)} h` : `il y a ${Math.floor(h / 24)} j`;
+}
+
 function rendreActus() {
   const el = $("actus"); if (!el) return;
   if (actusErreur && !Object.keys(actus).length) { el.innerHTML = `<p class="aide">Actualités indisponibles pour le moment (connexion ou source Yahoo Finance).</p>`; return; }
   if (!Object.keys(actus).length) { el.innerHTML = `<p class="aide">Chargement des actualités…</p>`; return; }
-  const ilYa = ts => {
-    const h = (Date.now() / 1000 - ts) / 3600;
-    return h < 1 ? "il y a moins d'1 h" : h < 24 ? `il y a ${Math.floor(h)} h` : `il y a ${Math.floor(h / 24)} j`;
-  };
   el.innerHTML = TITRES.map(t => {
     const liste = (actus[t.sym] || []).slice(0, 3);
     return `<div class="bloc-actus"><h3><i class="puce" style="background:${t.couleur}"></i>${t.court}</h3>
@@ -928,7 +933,7 @@ function rendreInfos() {
 
   rendreFacteurs();
   if (!$("actus").innerHTML) rendreActus();
-  if (document.querySelector(".panneau.actif").id === "infos") chargerActus();
+  chargerActus(); // aussi utilisées dans la justification des poids
 
   if (!$("evenements").innerHTML) {
     const ev = [
